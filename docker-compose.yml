@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  app:
+    container_name: sample-app
+    build:
+      dockerfile: ./docker/app/Dockerfile
+      context: .
+    volumes:
+      - type: bind
+        source: ./app
+        target: /app
+    command: 
+      sleep infinity
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    container_name: sample-db
+    build:
+      dockerfile: ./docker/db/Dockerfile
+      context: .
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_INITDB_ARGS
+    volumes:
+      - type: volume
+        source: sample-db-volume
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: ./docker/db/init
+        target: /docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 2s
+      retries: 5
+
+volumes:
+  sample-db-volume:
